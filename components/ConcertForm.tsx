@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import CategoryTagPicker from "@/components/CategoryTagPicker";
 import FunRatingPicker from "@/components/FunRatingPicker";
 import { FormField, FormInput, FormTextarea } from "@/components/FormField";
 import { Shimmer } from "@/components/Shimmer";
 import { createClient } from "@/lib/supabase/client";
 import { parseBudget } from "@/lib/budget";
+import { parseCategoryTags } from "@/lib/categories";
 import { formatCurrency, totalCost } from "@/lib/calculations";
 import { friendlyDbError } from "@/lib/userMessages";
 import type { Concert, ConcertCosts } from "@/lib/types";
@@ -36,6 +38,7 @@ const initialForm = {
   hours_at_event: "3",
   notes: "",
   budget: "",
+  category_tags: [] as string[],
   fun_rating: 7,
   ...emptyCosts,
 };
@@ -52,6 +55,7 @@ function formFromConcert(concert: Concert) {
     hours_at_event: String(concert.hours_at_event),
     notes: concert.notes ?? "",
     budget: concert.budget != null ? String(concert.budget) : "",
+    category_tags: [...concert.category_tags],
     fun_rating: concert.fun_rating,
     ticket_cost: concert.ticket_cost,
     ticket_fees: concert.ticket_fees,
@@ -85,6 +89,7 @@ function buildConcertPayload(form: typeof initialForm, userId: string) {
     travel_cost: Number(form.travel_cost) || 0,
     other_cost: Number(form.other_cost) || 0,
     budget: parseBudget(form.budget),
+    category_tags: parseCategoryTags(form.category_tags),
     fun_rating: form.fun_rating,
     notes: form.notes.trim() || null,
   };
@@ -150,6 +155,7 @@ export default function ConcertForm({ concert }: { concert?: Concert }) {
             travel_cost: payload.travel_cost,
             other_cost: payload.other_cost,
             budget: payload.budget,
+            category_tags: payload.category_tags,
             fun_rating: payload.fun_rating,
             notes: payload.notes,
           })
@@ -315,6 +321,19 @@ export default function ConcertForm({ concert }: { concert?: Concert }) {
             <CostField label="Travel / gas" value={form.travel_cost} onChange={(v) => updateField("travel_cost", v)} />
             <CostField label="Other" value={form.other_cost} onChange={(v) => updateField("other_cost", v)} />
           </CostGroup>
+        </div>
+      </section>
+
+      <section className="card card-elevated">
+        <div className="card-body">
+          <h2 className="card-title [font-family:var(--font-jakarta)]">Category tags</h2>
+          <p className="text-sm text-base-content/70 -mt-2 mb-4">
+            Optional. Pick one or more — used for dashboard analytics.
+          </p>
+          <CategoryTagPicker
+            value={form.category_tags}
+            onChange={(tags) => updateField("category_tags", tags)}
+          />
         </div>
       </section>
 

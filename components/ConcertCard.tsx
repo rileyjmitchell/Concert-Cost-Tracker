@@ -65,6 +65,16 @@ export default function ConcertCard({
           {concert.venue} · {concert.city}, {concert.state} · {formatDate(concert.concert_date)}
         </p>
 
+        {concert.category_tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {concert.category_tags.map((tag) => (
+              <span key={tag} className="badge badge-outline badge-sm rounded-full">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Metric label="Total cost" value={formatCurrency(total)} />
           <Metric

@@ -1,3 +1,4 @@
+import CategoryDashboard from "@/components/CategoryDashboard";
 import DashboardCharts from "@/components/DashboardCharts";
 import DashboardStats from "@/components/DashboardStats";
 import EmptyState from "@/components/EmptyState";
@@ -16,6 +17,8 @@ export default async function DashboardPage() {
       />
 
       <SpendingSummary concerts={concerts} />
+
+      <CategoryDashboard concerts={concerts} />
 
       {concerts.length === 0 ? (
         <EmptyState />

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { parseBudget } from "@/lib/budget";
+import { parseCategoryTags } from "@/lib/categories";
 import type { Concert } from "@/lib/types";
 
 export async function getUserConcerts(): Promise<Concert[]> {
@@ -28,6 +29,7 @@ export async function getUserConcerts(): Promise<Concert[]> {
     other_cost: Number(row.other_cost),
     fun_rating: Number(row.fun_rating),
     budget: parseBudget(row.budget),
+    category_tags: parseCategoryTags(row.category_tags),
   }));
 }
 
@@ -58,5 +60,6 @@ export async function getConcertById(id: string): Promise<Concert | null> {
     other_cost: Number(data.other_cost),
     fun_rating: Number(data.fun_rating),
     budget: parseBudget(data.budget),
+    category_tags: parseCategoryTags(data.category_tags),
   };
 }
