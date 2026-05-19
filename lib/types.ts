@@ -17,6 +17,7 @@ export type Concert = {
   lodging_cost: number;
   travel_cost: number;
   other_cost: number;
+  budget: number | null;
   fun_rating: number;
   notes: string | null;
   created_at: string;

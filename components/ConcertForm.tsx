@@ -9,9 +9,10 @@ import FunRatingPicker from "@/components/FunRatingPicker";
 import { FormField, FormInput, FormTextarea } from "@/components/FormField";
 import { Shimmer } from "@/components/Shimmer";
 import { createClient } from "@/lib/supabase/client";
+import { parseBudget } from "@/lib/budget";
 import { formatCurrency, totalCost } from "@/lib/calculations";
 import { friendlyDbError } from "@/lib/userMessages";
-import type { ConcertCosts } from "@/lib/types";
+import type { Concert, ConcertCosts } from "@/lib/types";
 
 const emptyCosts: ConcertCosts = {
   ticket_cost: 0,
@@ -34,14 +35,68 @@ const initialForm = {
   distance_from_home: "0",
   hours_at_event: "3",
   notes: "",
+  budget: "",
   fun_rating: 7,
   ...emptyCosts,
 };
 
-export default function ConcertForm() {
+function formFromConcert(concert: Concert) {
+  return {
+    concert_name: concert.concert_name,
+    artist: concert.artist,
+    venue: concert.venue,
+    city: concert.city,
+    state: concert.state,
+    concert_date: concert.concert_date,
+    distance_from_home: String(concert.distance_from_home),
+    hours_at_event: String(concert.hours_at_event),
+    notes: concert.notes ?? "",
+    budget: concert.budget != null ? String(concert.budget) : "",
+    fun_rating: concert.fun_rating,
+    ticket_cost: concert.ticket_cost,
+    ticket_fees: concert.ticket_fees,
+    parking_cost: concert.parking_cost,
+    food_drink_cost: concert.food_drink_cost,
+    merchandise_cost: concert.merchandise_cost,
+    lodging_cost: concert.lodging_cost,
+    travel_cost: concert.travel_cost,
+    other_cost: concert.other_cost,
+  };
+}
+
+function buildConcertPayload(form: typeof initialForm, userId: string) {
+  const hours = Number(form.hours_at_event);
+  return {
+    user_id: userId,
+    concert_name: form.concert_name.trim(),
+    artist: form.artist.trim(),
+    venue: form.venue.trim(),
+    city: form.city.trim(),
+    state: form.state.trim(),
+    concert_date: form.concert_date,
+    distance_from_home: Number(form.distance_from_home) || 0,
+    hours_at_event: hours,
+    ticket_cost: Number(form.ticket_cost) || 0,
+    ticket_fees: Number(form.ticket_fees) || 0,
+    parking_cost: Number(form.parking_cost) || 0,
+    food_drink_cost: Number(form.food_drink_cost) || 0,
+    merchandise_cost: Number(form.merchandise_cost) || 0,
+    lodging_cost: Number(form.lodging_cost) || 0,
+    travel_cost: Number(form.travel_cost) || 0,
+    other_cost: Number(form.other_cost) || 0,
+    budget: parseBudget(form.budget),
+    fun_rating: form.fun_rating,
+    notes: form.notes.trim() || null,
+  };
+}
+
+export default function ConcertForm({ concert }: { concert?: Concert }) {
+  const isEditing = Boolean(concert);
   const router = useRouter();
   const reduceMotion = useReducedMotion();
-  const [form, setForm] = useState({ ...initialForm });
+  const [form, setForm] = useState(() =>
+    concert ? formFromConcert(concert) : { ...initialForm }
+  );
   const [loading, setLoading] = useState(false);
 
   const liveTotal = useMemo(() => totalCost(form), [form]);
@@ -72,37 +127,49 @@ export default function ConcertForm() {
       return;
     }
 
-    const { error: insertError } = await supabase.from("concerts").insert({
-      user_id: user.id,
-      concert_name: form.concert_name.trim(),
-      artist: form.artist.trim(),
-      venue: form.venue.trim(),
-      city: form.city.trim(),
-      state: form.state.trim(),
-      concert_date: form.concert_date,
-      distance_from_home: Number(form.distance_from_home) || 0,
-      hours_at_event: hours,
-      ticket_cost: Number(form.ticket_cost) || 0,
-      ticket_fees: Number(form.ticket_fees) || 0,
-      parking_cost: Number(form.parking_cost) || 0,
-      food_drink_cost: Number(form.food_drink_cost) || 0,
-      merchandise_cost: Number(form.merchandise_cost) || 0,
-      lodging_cost: Number(form.lodging_cost) || 0,
-      travel_cost: Number(form.travel_cost) || 0,
-      other_cost: Number(form.other_cost) || 0,
-      fun_rating: form.fun_rating,
-      notes: form.notes.trim() || null,
-    });
+    const payload = buildConcertPayload(form, user.id);
+
+    const { error: saveError } = isEditing
+      ? await supabase
+          .from("concerts")
+          .update({
+            concert_name: payload.concert_name,
+            artist: payload.artist,
+            venue: payload.venue,
+            city: payload.city,
+            state: payload.state,
+            concert_date: payload.concert_date,
+            distance_from_home: payload.distance_from_home,
+            hours_at_event: payload.hours_at_event,
+            ticket_cost: payload.ticket_cost,
+            ticket_fees: payload.ticket_fees,
+            parking_cost: payload.parking_cost,
+            food_drink_cost: payload.food_drink_cost,
+            merchandise_cost: payload.merchandise_cost,
+            lodging_cost: payload.lodging_cost,
+            travel_cost: payload.travel_cost,
+            other_cost: payload.other_cost,
+            budget: payload.budget,
+            fun_rating: payload.fun_rating,
+            notes: payload.notes,
+          })
+          .eq("id", concert!.id)
+      : await supabase.from("concerts").insert(payload);
 
     setLoading(false);
 
-    if (insertError) {
-      toast.error(friendlyDbError(insertError.message));
+    if (saveError) {
+      toast.error(friendlyDbError(saveError.message));
       return;
     }
 
-    toast.success("Concert saved! Check your dashboard and My Concerts.");
-    setForm({ ...initialForm });
+    if (isEditing) {
+      toast.success("Concert updated!");
+      router.push("/concerts");
+    } else {
+      toast.success("Concert saved! Check your dashboard and My Concerts.");
+      setForm({ ...initialForm });
+    }
     router.refresh();
   }
 
@@ -193,6 +260,25 @@ export default function ConcertForm() {
 
       <section className="card card-elevated">
         <div className="card-body">
+          <FormField
+            label="Planned budget (optional)"
+            hint="Leave blank if you did not set a budget. Used to compare against your total cost."
+            className="mb-6"
+          >
+            <label className="form-input-modern flex items-center gap-2 !py-2 max-w-xs">
+              <span className="text-base-content/50">$</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="grow min-w-0 bg-transparent outline-none"
+                placeholder="e.g. 150"
+                value={form.budget}
+                onChange={(e) => updateField("budget", e.target.value)}
+              />
+            </label>
+          </FormField>
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="card-title [font-family:var(--font-jakarta)]">Costs</h2>
@@ -241,7 +327,7 @@ export default function ConcertForm() {
 
       <button type="submit" className="btn btn-primary btn-modern btn-lg w-full gap-2" disabled={loading}>
         {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-        {loading ? "Saving..." : "Save concert"}
+        {loading ? "Saving..." : isEditing ? "Save changes" : "Save concert"}
       </button>
     </form>
   );

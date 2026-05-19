@@ -11,6 +11,8 @@ import {
   topCostCategories,
   totalCost,
 } from "@/lib/calculations";
+import BudgetStatus from "@/components/BudgetStatus";
+import ConcertCardActions from "@/components/ConcertCardActions";
 import { MapPin, Star } from "lucide-react";
 
 function funAccentClass(rating: number): string {
@@ -75,6 +77,10 @@ export default function ConcertCard({
             value={`${formatNumber(Number(concert.distance_from_home), 1)} mi`}
           />
         </div>
+
+        <BudgetStatus concert={concert} />
+
+        <ConcertCardActions concertId={concert.id} />
 
         {categories.length > 0 && (
           <p className="text-sm">
