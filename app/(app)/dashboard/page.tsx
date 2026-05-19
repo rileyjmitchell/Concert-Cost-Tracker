@@ -1,3 +1,4 @@
+import BudgetVsActualDashboard from "@/components/BudgetVsActualDashboard";
 import CategoryDashboard from "@/components/CategoryDashboard";
 import DashboardCharts from "@/components/DashboardCharts";
 import DashboardStats from "@/components/DashboardStats";
@@ -17,6 +18,8 @@ export default async function DashboardPage() {
       />
 
       <SpendingSummary concerts={concerts} />
+
+      <BudgetVsActualDashboard concerts={concerts} />
 
       <CategoryDashboard concerts={concerts} />
 
